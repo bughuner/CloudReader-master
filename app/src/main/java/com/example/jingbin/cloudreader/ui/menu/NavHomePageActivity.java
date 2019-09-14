@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.databinding.ActivityNavHomePageBinding;
 import com.example.jingbin.cloudreader.utils.ShareUtils;
@@ -35,6 +37,16 @@ public class NavHomePageActivity extends AppCompatActivity {
                 ShareUtils.share(v.getContext(), R.string.string_share_text);
             }
         });
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
     }
 
     public static void startHome(Context mContext) {

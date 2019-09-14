@@ -1,14 +1,17 @@
 package com.example.jingbin.cloudreader.ui;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.databinding.DataBindingUtil;
 import android.databinding.ObservableField;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.view.ViewPager;
@@ -25,6 +28,8 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.app.ConstantsImageUrl;
 import com.example.jingbin.cloudreader.data.UserUtil;
@@ -84,7 +89,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private CompositeDisposable mCompositeDisposable;
     private NavHeaderMainBinding bind;
     public ObservableField<Boolean> isReadOk = new ObservableField<>();
-
+    //添加权限时用的图片
+    public static final int EXTERNAL_STORAGE_REQ_CODE = 10 ;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,6 +106,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initDrawerLayout();
         initListener();
         UpdateUtil.check(this, false);
+
+        //添加权限
+        int permission = ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // 请求权限
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    EXTERNAL_STORAGE_REQ_CODE);
+        }
+
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
     }
 
     private void initStatusView() {

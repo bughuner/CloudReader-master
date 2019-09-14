@@ -1,33 +1,21 @@
 package com.example.jingbin.cloudreader.ui.douban;
 
-import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.view.View;
 
-import com.bumptech.glide.Glide;
-import com.chad.library.adapter.base.BaseQuickAdapter;
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.adapter.BookTypeAdapter;
-import com.example.jingbin.cloudreader.adapter.CategoryArticleAdapter;
 import com.example.jingbin.cloudreader.base.BaseActivity;
 import com.example.jingbin.cloudreader.databinding.ActivityBookTypeBinding;
-import com.example.jingbin.cloudreader.databinding.ActivityNavAboutBinding;
 import com.example.jingbin.cloudreader.http.api.BookApiUtils;
-import com.example.jingbin.cloudreader.utils.BaseTools;
-import com.example.jingbin.cloudreader.utils.CommonUtils;
 import com.example.jingbin.cloudreader.utils.DebugUtil;
-import com.example.jingbin.cloudreader.utils.PerfectClickListener;
-import com.example.jingbin.cloudreader.utils.UpdateUtil;
 import com.example.jingbin.cloudreader.view.MyDividerItemDecoration;
-import com.example.jingbin.cloudreader.view.webview.WebViewActivity;
 import com.example.jingbin.cloudreader.viewmodel.menu.NoViewModel;
 
 import java.util.ArrayList;
@@ -48,6 +36,18 @@ public class BookTypeActivity extends BaseActivity<NoViewModel, ActivityBookType
         setTitle("选择分类");
         initRefreshView();
         initData();
+
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
     }
 
     private void initData() {

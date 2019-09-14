@@ -26,6 +26,8 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.adapter.MovieDetailAdapter;
 import com.example.jingbin.cloudreader.bean.MovieDetailBean;
@@ -84,6 +86,17 @@ public class MovieDetailActivity extends AppCompatActivity {
         setHeaderData(subjectsBean);
 
         loadMovieDetail();
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
 
     }
 

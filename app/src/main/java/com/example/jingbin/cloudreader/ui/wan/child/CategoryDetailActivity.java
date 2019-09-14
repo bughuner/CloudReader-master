@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.bean.wanandroid.TreeItemBean;
 import com.example.jingbin.cloudreader.databinding.ActivityCategoryDetailBinding;
@@ -36,6 +38,17 @@ public class CategoryDetailActivity extends AppCompatActivity {
         bindingView.toolbar.setNavigationOnClickListener(v -> finish());
 
         initData();
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
     }
 
     private void initData() {

@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.adapter.DouBanTopAdapter;
 import com.example.jingbin.cloudreader.base.BaseActivity;
@@ -30,6 +32,17 @@ public class DoubanTopActivity extends BaseActivity<DoubanTopViewModel, Activity
         setTitle("豆瓣电影Top250");
         initRecyclerView();
         loadDouBanTop250();
+
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
     }
 
     private void initRecyclerView() {

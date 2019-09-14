@@ -11,6 +11,8 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.adapter.FilmDetailActorAdapter;
 import com.example.jingbin.cloudreader.adapter.FilmDetailImageAdapter;
@@ -64,6 +66,17 @@ public class FilmDetailActivity extends BaseHeaderActivity<HeaderFilmDetailBindi
         bindingHeaderView.executePendingBindings();
 
         bindingContentView.tvOneTitle.postDelayed(this::loadMovieDetail, 450);
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
     }
 
     @Override

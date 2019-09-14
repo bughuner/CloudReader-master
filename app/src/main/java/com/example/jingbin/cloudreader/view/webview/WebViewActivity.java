@@ -28,6 +28,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.example.http.utils.CheckNetwork;
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.ui.MainActivity;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.app.Constants;
@@ -85,6 +87,17 @@ public class WebViewActivity extends AppCompatActivity implements IWebPageView {
         initWebView();
         webView.loadUrl(mUrl);
         getDataFromBrowser(getIntent());
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
     }
 
     private void getIntentData() {

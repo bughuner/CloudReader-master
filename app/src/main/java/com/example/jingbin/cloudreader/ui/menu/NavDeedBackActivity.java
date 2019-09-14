@@ -2,13 +2,12 @@ package com.example.jingbin.cloudreader.ui.menu;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Toast;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.base.BaseActivity;
 import com.example.jingbin.cloudreader.databinding.ActivityNavDeedBackBinding;
@@ -18,8 +17,6 @@ import com.example.jingbin.cloudreader.utils.PerfectClickListener;
 import com.example.jingbin.cloudreader.utils.ToastUtil;
 import com.example.jingbin.cloudreader.view.webview.WebViewActivity;
 import com.example.jingbin.cloudreader.viewmodel.menu.NoViewModel;
-
-import java.util.List;
 
 /**
  * @author jingbin
@@ -39,6 +36,16 @@ public class NavDeedBackActivity extends BaseActivity<NoViewModel, ActivityNavDe
         bindingView.tvEmail.setOnClickListener(listener);
         bindingView.tvFaq.setOnClickListener(listener);
         bindingView.tvQqGroup.setOnClickListener(listener);
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
     }
 
     private PerfectClickListener listener = new PerfectClickListener() {

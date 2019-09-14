@@ -9,6 +9,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.example.jingbin.cloudreader.BugHunter.FloatingActionButton;
+import com.example.jingbin.cloudreader.BugHunter.ScreenShotListenManager;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.adapter.MovieDetailAdapter;
 import com.example.jingbin.cloudreader.base.BaseHeaderActivity;
@@ -54,6 +56,18 @@ public class OneMovieDetailActivity extends BaseHeaderActivity<HeaderSlideShapeB
         bindingHeaderView.executePendingBindings();
 
         loadMovieDetail();
+
+        final FloatingActionButton button=new FloatingActionButton(this);
+        ScreenShotListenManager manager = ScreenShotListenManager.newInstance(this);
+        manager.setListener(
+                new ScreenShotListenManager.OnScreenShotListener() {
+                    public void onShot(String imagePath) {
+                        button.camera(FloatingActionButton.getCurrentActivity());
+                    }
+                }
+        );
+        manager.startListen();
+
     }
 
     @Override
