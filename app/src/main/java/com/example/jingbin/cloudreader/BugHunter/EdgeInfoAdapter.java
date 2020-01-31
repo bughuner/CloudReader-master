@@ -55,7 +55,8 @@ public class EdgeInfoAdapter extends ArrayAdapter<EdgeInfo> {
         message.append(targetNode);
         TextView textView = (TextView) view.findViewById(R.id.edge_textView);
         textView.setText(message.toString());
-
+        //把imageURL写死，进行测试http://172.19.240.240:8080/yunyue/pic/8df430a8_1547460287119.png////edgeInfo.getImageUrl()
+        String URLs = "http://172.19.240.240:8080/test/image/8df430a8_1547460287119.png";
         ImageView imageView = (ImageView) view.findViewById(R.id.edge_imageView);
         Glide.with(getContext()).load(edgeInfo.getImageUrl()).into(imageView);
 

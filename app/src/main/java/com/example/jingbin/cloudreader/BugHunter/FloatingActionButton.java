@@ -25,7 +25,6 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
 import com.example.jingbin.cloudreader.R;
 import com.example.jingbin.cloudreader.app.CloudReaderApplication;
 import com.oguzdev.circularfloatingactionmenu.library.FloatingActionMenu;
@@ -42,8 +41,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -53,15 +54,21 @@ public class FloatingActionButton {
     //demo用 写死uid
     public static Integer uid = 2;
     String app_key = "yunyue";
-
     final int MSG_ERROR = 1;
     final int MSG_OK = 0;
     final int MSG_FAIL = 2;
     private Handler handler;
-    private EdgeInfo edgeInfo;
+    //把这个设置成公共变量，让我能够在不同的页面进行调用
+    public static EdgeInfo edgeInfo;
+    //因为到不同的界面要走路，这个用来记录我走了几步，也就是说我到了哪个界面了
+    public static int step = 0;
+    //从数据库里读出来的数据带空格，这个用来对其去空格
+    String next_window = "";
+
+
     CloudReaderApplication myApplication;
     String TAG = "FloatingActionButton";
-
+    int CLICK_OR_NOT = 0;  //是否选择相应的测试用例
     public FloatingActionButton(final Activity context) {
         //设置悬浮按钮
         ImageView fabContent = new ImageView(context);
@@ -73,7 +80,6 @@ public class FloatingActionButton {
                 .setContentView(fabContent)
                 .setPosition(com.oguzdev.circularfloatingactionmenu.library.FloatingActionButton.POSITION_RIGHT_CENTER)
                 .build();
-
 
         SubActionButton.Builder rLSubBuilder = new SubActionButton.Builder(context)
                 .setTheme(SubActionButton.THEME_DARK);
@@ -183,9 +189,7 @@ public class FloatingActionButton {
                         Toast.makeText(context, "Get Success", Toast.LENGTH_SHORT).show();
                         try {
                             JSONObject result = new JSONObject(msg.obj.toString());
-
                             Log.i(TAG, "handleMessage: 拿结果"+msg.obj.toString());
-
                             JSONArray dataarray = result.getJSONArray("data");
                             final List<EdgeInfo> edgeInfos = new ArrayList<>();
                             for (int i = 0; i < dataarray.length(); i++) {
@@ -204,7 +208,7 @@ public class FloatingActionButton {
                             }
                             View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
                             TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
-                            textView.setText("待探索的页面");
+                            textView.setText("Uncovered Window");
                             final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
 
                             listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
@@ -216,6 +220,7 @@ public class FloatingActionButton {
                                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                     edgeInfo = edgeInfos.get(position);
                                     view.setAlpha(0.5f);
+                                    CLICK_OR_NOT = 1;
                                 }
                             });
 
@@ -224,20 +229,27 @@ public class FloatingActionButton {
                                     .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
-                                            Toast.makeText(context, "You have chosen" + edgeInfo.getId(), Toast.LENGTH_SHORT).show();
-                                            Long edgeId = new Long(edgeInfo.getId());
-                                            OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/edge/" + edgeId + "/" + uid,
-                                                    new okhttp3.Callback() {
-                                                        @Override
-                                                        public void onFailure(Call call, IOException e) {
+                                            if(CLICK_OR_NOT==1)
+                                            {
+                                                Toast.makeText(context, "You have chosen" + edgeInfo.getId(), Toast.LENGTH_SHORT).show();
+//                                                OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/edge/" + edgeInfo.getId() + "/" + uid,
+//                                                        new okhttp3.Callback() {
+//                                                            @Override
+//                                                            public void onFailure(Call call, IOException e) {
+////
+//                                                            }
 //
-                                                        }
+//                                                            @Override
+//                                                            public void onResponse(Call call, Response response) throws IOException {
+////
+//                                                            }
+//                                                        });
+                                                CLICK_OR_NOT = 0;
+                                            }else
+                                            {
+                                                Toast.makeText(context, "no test case selected", Toast.LENGTH_SHORT).show();
+                                            }
 
-                                                        @Override
-                                                        public void onResponse(Call call, Response response) throws IOException {
-//
-                                                        }
-                                                    });
                                         }
                                     })
                                     .create();
@@ -256,7 +268,7 @@ public class FloatingActionButton {
             }
         };
 
-        OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/app/bug/JianDou/" + currentWindow + "/bugList/0/2",
+        OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/app/bug/"+app_key+"/" + currentWindow + "/bugList/0/2",
                 new Callback() {
 
                     @Override
@@ -273,7 +285,6 @@ public class FloatingActionButton {
                         message.what = MSG_OK;
                         message.obj = response.body().string();
                         handler.sendMessage(message);
-                        Log.i("floatingActionButton", "onResponse: 我现在给你回应"+message.toString());
                     }
                 });
 
@@ -286,7 +297,6 @@ public class FloatingActionButton {
         String currWindow = getCurrentActivity().getClass().getName();
         String[] infos = currWindow.split("\\.");
         final String currentWindow = infos[infos.length - 1];
-
         handler = new Handler() {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             public void handleMessage(Message msg) {
@@ -297,29 +307,33 @@ public class FloatingActionButton {
                             JSONObject result = new JSONObject(msg.obj.toString());
                             JSONArray dataarray = result.getJSONArray("data");
                             final List<EdgeInfo> edgeInfos = new ArrayList<>();
+                            //避免重复的ID出现
+                            Set<String> idSet = new HashSet<>();
                             for (int i = 0; i < dataarray.length(); i++) {
                                 JSONObject data = dataarray.getJSONObject(i);
                                 String id = data.getString("id");
-//                                Long id = data.getLong(data.getString("id"));
-                                String sourceNode = data.getString("sourceNode");
-                                String targetNode = data.getString("targetNode");
-                                String eventHandlers = data.getString("eventHandlers");
-                                String message = data.getString("message");
-                                String path = data.getString("path");
-                                String imageUrl = data.getString("imageUrl");
-                                String dateType = data.getString("dataType");
-                                EdgeInfo edgeInfo = new EdgeInfo(id, sourceNode, targetNode, eventHandlers, message, path, imageUrl);
-                                edgeInfo.setDataType(new Integer(dateType));
-                                edgeInfos.add(edgeInfo);
+                                if(!idSet.contains(id))
+                                {
+                                    idSet.add(id);
+                                    String sourceNode = data.getString("sourceNode");
+                                    String targetNode = data.getString("targetNode");
+                                    String eventHandlers = data.getString("eventHandlers");
+                                    String message = data.getString("message");
+                                    String path = data.getString("path");
+                                    String imageUrl = data.getString("imageUrl");
+                                    String dateType = data.getString("dataType");
+                                    EdgeInfo edgeInfo = new EdgeInfo(id, sourceNode, targetNode, eventHandlers, message, path, imageUrl);
+                                    edgeInfo.setDataType(new Integer(dateType));
+                                    edgeInfos.add(edgeInfo);
+                                }else
+                                {
 
+                                }
                             }
-
                             View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
                             TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
-
-                            textView.setText("Recommended Exceptions：");
+                            textView.setText("Recommended Task：");
                             final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
-
                             listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
                             final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
                             listView.setAdapter(edgeInfoAdapter);
@@ -329,6 +343,7 @@ public class FloatingActionButton {
                                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                                     edgeInfo = edgeInfos.get(position);
                                     view.setAlpha(0.5f);
+                                    CLICK_OR_NOT = 1;
                                 }
                             });
 
@@ -337,19 +352,15 @@ public class FloatingActionButton {
                                     .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
-                                            Toast.makeText(context, "You have chosen" + edgeInfo.getId(), Toast.LENGTH_SHORT).show();
-                                            OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/edge/" + edgeInfo.getId() + "/" + uid,
-                                                    new okhttp3.Callback() {
-                                                        @Override
-                                                        public void onFailure(Call call, IOException e) {
-//
-                                                        }
-
-                                                        @Override
-                                                        public void onResponse(Call call, Response response) throws IOException {
-//
-                                                        }
-                                                    });
+                                            if (CLICK_OR_NOT==1) {
+                                                Toast.makeText(context, "You have chosen" + edgeInfo.getId(), Toast.LENGTH_SHORT).show();
+                                                //表明我要从头开始走路了
+                                                int step = 0;
+                                                CLICK_OR_NOT = 0;
+                                            } else
+                                            {
+                                                Toast.makeText(context, "no test case selected", Toast.LENGTH_SHORT).show();
+                                            }
 
                                         }
                                     })
@@ -369,7 +380,7 @@ public class FloatingActionButton {
             }
         };
 
-        OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/app/bug/JianDou/" + currentWindow + "/bugList/2/" + uid,
+        OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/app/bug/"+app_key+"/" + currentWindow + "/bugList/2/" + uid,
                 new Callback() {
 
                     @Override
@@ -389,141 +400,287 @@ public class FloatingActionButton {
                 });
 
     }
-
     @SuppressLint("HandlerLeak")
     public void Hint(final Activity context) {
-        String currWindow = getCurrentActivity().getClass().getName();
-        String[] infos = currWindow.split("\\.");
-        String currentWindow = infos[infos.length - 1];
-        String[] nodeWindows = edgeInfo.getPath().split("->");
 
-        if (edgeInfo.getDataType().equals(0)) {
-
+        if(edgeInfo==null)
+        {
+            Toast.makeText(context, "No test case selected",Toast.LENGTH_SHORT).show();
+        }else  //这里是选中用例
+        {
+            String currWindow = getCurrentActivity().getClass().getName();
+            String[] infos = currWindow.split("\\.");
+            String currentWindow = infos[infos.length - 1];
+            String[]  nodeWindows = edgeInfo.getPath().split("->");
+            //如果选择的是未覆盖的路径，那么就这样显示
+            if (edgeInfo.getDataType().equals(0)) {
             View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
             TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
-            textView.setText("Recommended Event:");
+            textView.setText("Uncovered Event:");
             final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
             List<EdgeInfo> edgeInfos = new ArrayList<>();
             edgeInfos.add(edgeInfo);
             listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
             final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
             listView.setAdapter(edgeInfoAdapter);
-
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setView(bottemView)
                     .setPositiveButton("OK", null)
                     .create();
             builder.show();
-
-        } else if (edgeInfo.getDataType().equals(2)) {
-            for (int i = 0; i < nodeWindows.length - 1; i++) {
-                //第一次到达最后一条跳转A-B-C-D:C-D
-                if (nodeWindows[i].equals(currentWindow) && nodeWindows[i + 1].equals(currentWindow)
-                        && i + 1 == nodeWindows.length - 1 && edgeInfo.getCount() == 0) {
-                    //推荐bug
-
-                    View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
-                    TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
-                    textView.setText("Trigger Exception:");
-                    final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
-                    List<EdgeInfo> edgeInfos = new ArrayList<>();
-                    edgeInfos.add(edgeInfo);
-                    listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
-                    final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
-                    listView.setAdapter(edgeInfoAdapter);
-
-                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                    builder.setView(bottemView)
-                            .setPositiveButton("OK", null)
-                            .create();
-                    builder.show();
-
-                    edgeInfo.setCount(1);
-                    Log.i(TAG, "Hint: 1111111111111111111111111111");
-                } else if (nodeWindows[i].equals(currentWindow) && nodeWindows[i + 1].equals(currentWindow)
-                        && i + 1 == nodeWindows.length - 1 && edgeInfo.getCount() != 0) {
-                    //第二次在最后跳转中请求提示
-
-                    TextView textView = new TextView(context);
-                    StringBuilder builder = new StringBuilder();
-                    builder.append("You have completed this task");
-                    builder.append("\n");
-                    builder.append("please submit bug report");
-                    builder.append("\n");
-                    builder.append("or choose another task");
-                    textView.setText(builder.toString());
-                    AlertDialog alertDialog = new AlertDialog.Builder(context)
-                            .setTitle("Hint")
-                            .setView(textView)
-                            .setNeutralButton("report", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-
-                                    JumpEdit(context);
-                                }
-                            })
-                            .setPositiveButton("continue", null)
-                            .create();
-                    alertDialog.show();
-
-                } else if (nodeWindows[i].equals(currentWindow)) {
-                    //A-B-C-D:B-C
-                    handler = new Handler() {
-                        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-                        public void handleMessage(Message msg) {
-                            switch (msg.what) {
-                                case MSG_OK:
-                                    Toast.makeText(context, "Get Success", Toast.LENGTH_SHORT).show();
-                                    Log.e("response", msg.obj.toString());
+            }else {                  //这种是遇到异常
+                handler = new Handler() {
+                    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+                    public void handleMessage(Message msg) {
+                        switch (msg.what) {
+                            case MSG_OK:
+                                if (step < nodeWindows.length) {
                                     try {
-                                        JSONObject result = new JSONObject(msg.obj.toString());
-                                        JSONArray dataarray = result.getJSONArray("data");
-                                        JSONObject data = dataarray.getJSONObject(0);
-
+                                        JSONObject jsonObject = new JSONObject(msg.obj.toString());
+                                        JSONObject data = jsonObject.getJSONObject("data");
+                                        String id = data.getString("id");
+                                        String sourceNode = data.getString("sourceNode");
+                                        String targetNode = data.getString("targetNode");
                                         String eventHandlers = data.getString("eventHandlers");
+                                        String message = data.getString("message");
+                                        String path = data.getString("path");
                                         String imageUrl = data.getString("imageUrl");
-
-                                        ImageView imageView = new ImageView(context);
-                                        Glide.with(context).load(edgeInfo.getImageUrl()).into(imageView);
-
-                                        StringBuilder message = new StringBuilder();
-                                        message.append("Hint: ");
-                                        message.append(eventHandlers);
-
-                                        new AlertDialog.Builder(context)
-                                                .setTitle(message.toString())
-                                                .setView(imageView)
-                                                .setPositiveButton("OK", null);
+                                        String dateType = data.getString("dataType");
+                                        EdgeInfo new_edgeInfo = new EdgeInfo(id, sourceNode, targetNode, eventHandlers, message, path, imageUrl);
+                                        View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+                                        TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+                                        textView.setText("Transition Path:");
+                                        final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+                                        List<EdgeInfo> edgeInfos = new ArrayList<>();
+                                        edgeInfos.add(new_edgeInfo);
+                                        listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+                                        final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+                                        listView.setAdapter(edgeInfoAdapter);
+                                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                                        builder.setView(bottemView)
+                                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                                    @Override
+                                                    public void onClick(DialogInterface dialog, int which) {
+                                                        step++;
+                                                    }
+                                                })
+                                                .setNegativeButton("cancel", null)
+                                                .create();
+                                        builder.show();
                                     } catch (Exception e) {
                                         e.printStackTrace();
                                     }
-                            }
+                                } else  //已经走到目标路径了
+                                {
+                                    step = 0;
+                                    TextView textView = new TextView(context);
+                                    StringBuilder builder = new StringBuilder();
+                                    builder.append("        You have completed this task");
+                                    builder.append("\n");
+                                    builder.append("        please submit bug report");
+                                    builder.append("\n");
+                                    builder.append("        or choose another task");
+                                    textView.setText(builder.toString());
+                                    AlertDialog alertDialog = new AlertDialog.Builder(context)
+                                            .setTitle("Hint")
+                                            .setView(textView)
+                                            .setNeutralButton("Report Exection", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    JumpEdit(context);
+                                                }
+                                            })
+                                            .setPositiveButton("Test Next", null)
+                                            .create();
+                                    alertDialog.show();
+                                    //然后把它去掉
+//                                    OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/edge/" + edgeInfo.getId() + "/" + uid,
+//                                            new okhttp3.Callback() {
+//                                                @Override
+//                                                public void onFailure(Call call, IOException e) {
+////
+//                                                }
+//
+//                                                @Override
+//                                                public void onResponse(Call call, Response response) throws IOException {
+////
+//                                                }
+//                                            });
+
+                                }
+                                break;
+                            case MSG_FAIL:
+                                Toast.makeText(context, "Network Error", Toast.LENGTH_SHORT).show();
+                                break;
+                            default:
+                                break;
                         }
-                    };
-                    OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/path/nextHint/"
-                                    + currentWindow + "/" + nodeWindows[i + 1] + "/" + new Long(edgeInfo.getId()),
-                            new Callback() {
+                    }
+                };
 
-                                @Override
-                                public void onFailure(Call call, IOException e) {
-                                    Message message = new Message();
-                                    message.what = MSG_FAIL;
-                                    handler.sendMessage(message);
-                                }
 
-                                @Override
-                                public void onResponse(Call call, Response response) throws IOException {
-                                    Message message = new Message();
-                                    message.what = MSG_OK;
-                                    message.obj = response.body().string();
-                                    handler.sendMessage(message);
-                                }
-                            });
+                if(step<nodeWindows.length)
+                {
+                     next_window = nodeWindows[step];
+                    if(next_window.startsWith(" "))
+                    {
+                        next_window = next_window.substring(1,next_window.length());
+                    }
                 }
-            }
-        }
+                OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/path/nextHint/"
+                                + currentWindow + "/" +next_window+ "/" + new Long(edgeInfo.getId()),
+                        new Callback() {
+                            @Override
+                            public void onFailure(Call call, IOException e) {
+                                Message message = new Message();
+                                message.what = MSG_FAIL;
+                                handler.sendMessage(message);
+                            }
+
+                            public void onResponse(Call call, Response response) throws IOException {
+                                Message message = new Message();
+                                message.what = MSG_OK;
+                                message.obj = response.body().string();
+                                handler.sendMessage(message);
+                                System.out.println("拿到数据："+message.obj.toString()+"-----------------------------------------");
+                            }
+                        });
+             }
+
+         }
 
     }
+//    @SuppressLint("HandlerLeak")
+//    public void Hint(final Activity context) {
+//        String currWindow = getCurrentActivity().getClass().getName();
+//        String[] infos = currWindow.split("\\.");
+//        String currentWindow = infos[infos.length - 1];
+//        String[] nodeWindows = edgeInfo.getPath().split("->");
+//        if (edgeInfo.getDataType().equals(0)) {
+//
+//            View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+//            TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+//            textView.setText("Recommended Event:");
+//            final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+//            List<EdgeInfo> edgeInfos = new ArrayList<>();
+//            edgeInfos.add(edgeInfo);
+//            listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+//            final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+//            listView.setAdapter(edgeInfoAdapter);
+//
+//            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+//            builder.setView(bottemView)
+//                    .setPositiveButton("OK", null)
+//                    .create();
+//            builder.show();
+//
+//        } else if (edgeInfo.getDataType().equals(2)) {
+//            for (int i = 0; i < nodeWindows.length - 1; i++) {
+//                //第一次到达最后一条跳转A-B-C-D:C-D
+//                if (nodeWindows[i].equals(currentWindow) && nodeWindows[i + 1].equals(currentWindow)
+//                        && i + 1 == nodeWindows.length - 1 && edgeInfo.getCount() == 0) {
+//                    //推荐bug
+//
+//                    View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+//                    TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+//                    textView.setText("Trigger Exception:");
+//                    final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+//                    List<EdgeInfo> edgeInfos = new ArrayList<>();
+//                    edgeInfos.add(edgeInfo);
+//                    listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+//                    final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+//                    listView.setAdapter(edgeInfoAdapter);
+//
+//                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+//                    builder.setView(bottemView)
+//                            .setPositiveButton("OK", null)
+//                            .create();
+//                    builder.show();
+//
+//                    edgeInfo.setCount(1);
+//                    Log.i(TAG, "Hint: 1111111111111111111111111111");
+//                } else if (nodeWindows[i].equals(currentWindow) && nodeWindows[i + 1].equals(currentWindow)
+//                        && i + 1 == nodeWindows.length - 1 && edgeInfo.getCount() != 0) {
+//                    //第二次在最后跳转中请求提示
+//                    TextView textView = new TextView(context);
+//                    StringBuilder builder = new StringBuilder();
+//                    builder.append("        You have completed this task");
+//                    builder.append("\n");
+//                    builder.append("        please submit bug report");
+//                    builder.append("\n");
+//                    builder.append("        or choose another task");
+//                    textView.setText(builder.toString());
+//                    AlertDialog alertDialog = new AlertDialog.Builder(context)
+//                            .setTitle("Hint")
+//                            .setView(textView)
+//                            .setNeutralButton("report", new DialogInterface.OnClickListener() {
+//                                @Override
+//                                public void onClick(DialogInterface dialog, int which) {
+//                                    JumpEdit(context);
+//                                }
+//                            })
+//                            .setPositiveButton("continue", null)
+//                            .create();
+//                    alertDialog.show();
+//
+//                } else if (nodeWindows[i].equals(currentWindow)) {
+//                    //A-B-C-D:B-C
+//                    handler = new Handler() {
+//                        @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+//                        public void handleMessage(Message msg) {
+//                            switch (msg.what) {
+//                                case MSG_OK:
+//                                    Toast.makeText(context, "Get Success", Toast.LENGTH_SHORT).show();
+//                                    Log.e("response", msg.obj.toString());
+//                                    try {
+//                                        JSONObject result = new JSONObject(msg.obj.toString());
+//                                        JSONArray dataarray = result.getJSONArray("data");
+//                                        JSONObject data = dataarray.getJSONObject(0);
+//
+//                                        String eventHandlers = data.getString("eventHandlers");
+//                                        String imageUrl = data.getString("imageUrl");
+//
+//                                        ImageView imageView = new ImageView(context);
+//                                        Glide.with(context).load(edgeInfo.getImageUrl()).into(imageView);
+//
+//                                        StringBuilder message = new StringBuilder();
+//                                        message.append("Hint: ");
+//                                        message.append(eventHandlers);
+//
+//                                        new AlertDialog.Builder(context)
+//                                                .setTitle(message.toString())
+//                                                .setView(imageView)
+//                                                .setPositiveButton("OK", null);
+//                                    } catch (Exception e) {
+//                                        e.printStackTrace();
+//                                    }
+//                            }
+//                        }
+//                    };
+//                    OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/path/nextHint/"
+//                                    + currentWindow + "/" + nodeWindows[i + 1] + "/" + new Long(edgeInfo.getId()),
+//                            new Callback() {
+//
+//                                @Override
+//                                public void onFailure(Call call, IOException e) {
+//                                    Message message = new Message();
+//                                    message.what = MSG_FAIL;
+//                                    handler.sendMessage(message);
+//                                }
+//
+//                                @Override
+//                                public void onResponse(Call call, Response response) throws IOException {
+//                                    Message message = new Message();
+//                                    message.what = MSG_OK;
+//                                    message.obj = response.body().string();
+//                                    handler.sendMessage(message);
+//                                }
+//                            });
+//                }
+//            }
+//        }
+//
+//    }
 
     @SuppressLint("HandlerLeak")
     public void settings(final Activity context) {
@@ -665,9 +822,9 @@ public class FloatingActionButton {
         final RadioGroup bugitem = (RadioGroup) textEntryView.findViewById(R.id.radioGroup_pictureitem);
         new AlertDialog.Builder(activity)
                 .setIcon(R.drawable.button_action_blue)
-                .setTitle("提交测试报告")
+                .setTitle("Bug Report")
                 .setView(textEntryView)
-                .setNegativeButton("取消",
+                .setNegativeButton("cancel",
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog,
@@ -678,7 +835,7 @@ public class FloatingActionButton {
                             }
 
                         })
-                .setPositiveButton("提交",
+                .setPositiveButton("submit",
                         new DialogInterface.OnClickListener() {
 
 
@@ -697,7 +854,7 @@ public class FloatingActionButton {
                                     e.printStackTrace();
                                 }
                                 try {
-                                    bugbaseinfo.put("appKey", "jiandou");
+                                    bugbaseinfo.put("appKey", app_key);
                                     bugbaseinfo.put("appVersion", Appkey.getVersionName(activity.getApplicationContext()));
                                     bugbaseinfo.put("describe", edit.getText());
                                     bugbaseinfo.put("uId", uid);
@@ -738,7 +895,7 @@ public class FloatingActionButton {
                                     bugdeviceinfo.put("systemVersion", SystemUtil.getSystemVersion());
                                     bugdeviceinfo.put("systemModel", SystemUtil.getSystemModel());
                                     bugdeviceinfo.put("deviceBrand", SystemUtil.getDeviceBrand());
-                                    bugdeviceinfo.put("providersName", "中国移动");
+                                    bugdeviceinfo.put("providersName", "china mobile");
                                     bugdeviceinfo.put("resolution", SystemUtil.getResolution(activity.getApplicationContext()));
                                     bugdeviceinfo.put("availMemory", SystemUtil.getAvailMemory(activity.getApplicationContext()));
                                     bugdeviceinfo.put("totalMemory", SystemUtil.getTotalMemory(activity.getApplicationContext()));
@@ -822,7 +979,7 @@ public class FloatingActionButton {
         // create a dialog
         new AlertDialog.Builder(activity)
                 .setIcon(R.drawable.button_action_blue)
-                .setTitle("Submit")
+                .setTitle("Bug Report")
                 .setView(textEntryView)
                 .setNegativeButton("cancel",
                         new DialogInterface.OnClickListener() {
@@ -855,7 +1012,7 @@ public class FloatingActionButton {
                                 try {
 
                                    // bugbaseinfo.put("appKey", Appkey.getApplicationMetaData(activity.getApplicationContext()));
-                                    bugbaseinfo.put("appKey", "jiandou");
+                                    bugbaseinfo.put("appKey", app_key);
                                     bugbaseinfo.put("appVersion", Appkey.getVersionName(activity.getApplicationContext()));
                                     bugbaseinfo.put("describe", mname_edit.getText());
                                     bugbaseinfo.put("uId", uid);
@@ -895,7 +1052,7 @@ public class FloatingActionButton {
                                     bugdeviceinfo.put("systemVersion", SystemUtil.getSystemVersion());
                                     bugdeviceinfo.put("systemModel", SystemUtil.getSystemModel());
                                     bugdeviceinfo.put("deviceBrand", SystemUtil.getDeviceBrand());
-                                    bugdeviceinfo.put("providersName", "中国移动");
+                                    bugdeviceinfo.put("providersName", "china mobile");
                                     bugdeviceinfo.put("resolution", SystemUtil.getResolution(activity.getApplicationContext()));
                                     bugdeviceinfo.put("availMemory", SystemUtil.getAvailMemory(activity.getApplicationContext()));
                                     bugdeviceinfo.put("totalMemory", SystemUtil.getTotalMemory(activity.getApplicationContext()));
@@ -944,7 +1101,6 @@ public class FloatingActionButton {
         dialog.show();
         final EditText etName = (EditText) dialogView.findViewById(R.id.et_name);
         final EditText etPwd = (EditText) dialogView.findViewById(R.id.et_pwd);
-
         final Button btnLogin = (Button) dialogView.findViewById(R.id.btn_login);
         final Button btnCancel = (Button) dialogView.findViewById(R.id.btn_cancel);
 

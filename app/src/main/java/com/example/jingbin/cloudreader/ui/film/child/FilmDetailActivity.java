@@ -82,7 +82,8 @@ public class FilmDetailActivity extends BaseHeaderActivity<HeaderFilmDetailBindi
     @Override
     protected void setTitleClickMore() {
         if (!TextUtils.isEmpty(mMoreUrl)) {
-            WebViewActivity.loadUrl(this, mMoreUrl, mMoreTitle);
+        //    WebViewActivity.loadUrl(this, mMoreUrl, mMoreTitle);
+            WebViewActivity.loadUrl(this, "www.douba.com", mMoreTitle);
         } else {
             ToastUtil.showToast("抱歉，暂无更多~");
         }
