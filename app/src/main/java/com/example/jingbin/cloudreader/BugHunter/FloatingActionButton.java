@@ -63,8 +63,6 @@ public class FloatingActionButton {
     //因为到不同的界面要走路，这个用来记录我走了几步，也就是说我到了哪个界面了
     public static int step = 0;
     //从数据库里读出来的数据带空格，这个用来对其去空格
-    String next_window = "";
-
 
     CloudReaderApplication myApplication;
     String TAG = "FloatingActionButton";
@@ -412,35 +410,57 @@ public class FloatingActionButton {
             String[] infos = currWindow.split("\\.");
             String currentWindow = infos[infos.length - 1];
             String[]  nodeWindows = edgeInfo.getPath().split("->");
+            String next_window = "";
+            System.out.println(step+"---------------------------------------------------------------------------");
+            if(step<nodeWindows.length)
+            {
+                next_window = nodeWindows[step];
+                next_window = next_window.trim();
+                if(next_window.startsWith(" "))
+                {
+                    next_window = next_window.substring(1,next_window.length());
+                }
+            }
+
             //如果选择的是未覆盖的路径，那么就这样显示
             if (edgeInfo.getDataType().equals(0)) {
-            View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
-            TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
-            textView.setText("Uncovered Event:");
-            final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
-            List<EdgeInfo> edgeInfos = new ArrayList<>();
-            edgeInfos.add(edgeInfo);
-            listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
-            final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
-            listView.setAdapter(edgeInfoAdapter);
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setView(bottemView)
-                    .setPositiveButton("OK", null)
-                    .create();
-            builder.show();
+                View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+                TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+                textView.setText("Uncovered Event:");
+                final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+                List<EdgeInfo> edgeInfos = new ArrayList<>();
+                edgeInfos.add(edgeInfo);
+                listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+                final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+                listView.setAdapter(edgeInfoAdapter);
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setView(bottemView)
+                        .setPositiveButton("OK", null)
+                        .create();
+                builder.show();
             }else {                  //这种是遇到异常
                 handler = new Handler() {
                     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
                     public void handleMessage(Message msg) {
                         switch (msg.what) {
                             case MSG_OK:
-                                if (step < nodeWindows.length) {
+                                if (step != 2) {
                                     try {
                                         JSONObject jsonObject = new JSONObject(msg.obj.toString());
                                         JSONObject data = jsonObject.getJSONObject("data");
                                         String id = data.getString("id");
                                         String sourceNode = data.getString("sourceNode");
                                         String targetNode = data.getString("targetNode");
+                                        if(targetNode.equals(nodeWindows[0].trim()))
+                                        {
+                                            step++;
+                                        }
+                                        if(edgeInfo.getId().equals(id))
+                                        {
+                                            step = 2;
+                                        }
+                                        System.out.println(id+"-----"+edgeInfo.getId()+"--------------------------------"+step+"---");
+                                        System.out.println("-------"+sourceNode+"---"+targetNode+"-----"+nodeWindows[0]+"-----------------");
                                         String eventHandlers = data.getString("eventHandlers");
                                         String message = data.getString("message");
                                         String path = data.getString("path");
@@ -461,7 +481,7 @@ public class FloatingActionButton {
                                                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                                     @Override
                                                     public void onClick(DialogInterface dialog, int which) {
-                                                        step++;
+
                                                     }
                                                 })
                                                 .setNegativeButton("cancel", null)
@@ -517,16 +537,6 @@ public class FloatingActionButton {
                         }
                     }
                 };
-
-
-                if(step<nodeWindows.length)
-                {
-                     next_window = nodeWindows[step];
-                    if(next_window.startsWith(" "))
-                    {
-                        next_window = next_window.substring(1,next_window.length());
-                    }
-                }
                 OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/path/nextHint/"
                                 + currentWindow + "/" +next_window+ "/" + new Long(edgeInfo.getId()),
                         new Callback() {
@@ -542,14 +552,165 @@ public class FloatingActionButton {
                                 message.what = MSG_OK;
                                 message.obj = response.body().string();
                                 handler.sendMessage(message);
-                                System.out.println("拿到数据："+message.obj.toString()+"-----------------------------------------");
                             }
                         });
-             }
+            }
 
-         }
+        }
 
     }
+    //暂时不用
+//    @SuppressLint("HandlerLeak")
+//    public void Hint(final Activity context) {
+//
+//        if(edgeInfo==null)
+//        {
+//            Toast.makeText(context, "No test case selected",Toast.LENGTH_SHORT).show();
+//        }else  //这里是选中用例
+//        {
+//            String currWindow = getCurrentActivity().getClass().getName();
+//            String[] infos = currWindow.split("\\.");
+//            String currentWindow = infos[infos.length - 1];
+//            String[]  nodeWindows = edgeInfo.getPath().split("->");
+//            //如果选择的是未覆盖的路径，那么就这样显示
+//            if (edgeInfo.getDataType().equals(0)) {
+//            View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+//            TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+//            textView.setText("Uncovered Event:");
+//            final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+//            List<EdgeInfo> edgeInfos = new ArrayList<>();
+//            edgeInfos.add(edgeInfo);
+//            listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+//            final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+//            listView.setAdapter(edgeInfoAdapter);
+//            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+//            builder.setView(bottemView)
+//                    .setPositiveButton("OK", null)
+//                    .create();
+//            builder.show();
+//            }else {                  //这种是遇到异常
+//                handler = new Handler() {
+//                    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+//                    public void handleMessage(Message msg) {
+//                        switch (msg.what) {
+//                            case MSG_OK:
+//                                if (step < nodeWindows.length) {
+//                                    try {
+//                                        JSONObject jsonObject = new JSONObject(msg.obj.toString());
+//                                        JSONObject data = jsonObject.getJSONObject("data");
+//                                        String id = data.getString("id");
+//                                        String sourceNode = data.getString("sourceNode");
+//                                        String targetNode = data.getString("targetNode");
+//                                        String eventHandlers = data.getString("eventHandlers");
+//                                        String message = data.getString("message");
+//                                        String path = data.getString("path");
+//                                        String imageUrl = data.getString("imageUrl");
+//                                        String dateType = data.getString("dataType");
+//                                        EdgeInfo new_edgeInfo = new EdgeInfo(id, sourceNode, targetNode, eventHandlers, message, path, imageUrl);
+//                                        View bottemView = LayoutInflater.from(context).inflate(R.layout.dialoglistview, null);
+//                                        TextView textView = (TextView) bottemView.findViewById(R.id.dialoglist_id);
+//                                        textView.setText("Transition Path:");
+//                                        final ListView listView = (ListView) bottemView.findViewById(R.id.listView);
+//                                        List<EdgeInfo> edgeInfos = new ArrayList<>();
+//                                        edgeInfos.add(new_edgeInfo);
+//                                        listView.setChoiceMode(AbsListView.CHOICE_MODE_SINGLE);
+//                                        final EdgeInfoAdapter edgeInfoAdapter = new EdgeInfoAdapter(context, R.layout.edgeitem, edgeInfos);
+//                                        listView.setAdapter(edgeInfoAdapter);
+//                                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+//                                        builder.setView(bottemView)
+//                                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//                                                    @Override
+//                                                    public void onClick(DialogInterface dialog, int which) {
+//                                                        step++;
+//                                                    }
+//                                                })
+//                                                .setNegativeButton("cancel", null)
+//                                                .create();
+//                                        builder.show();
+//                                    } catch (Exception e) {
+//                                        e.printStackTrace();
+//                                    }
+//                                } else  //已经走到目标路径了
+//                                {
+//                                    step = 0;
+//                                    TextView textView = new TextView(context);
+//                                    StringBuilder builder = new StringBuilder();
+//                                    builder.append("        You have completed this task");
+//                                    builder.append("\n");
+//                                    builder.append("        please submit bug report");
+//                                    builder.append("\n");
+//                                    builder.append("        or choose another task");
+//                                    textView.setText(builder.toString());
+//                                    AlertDialog alertDialog = new AlertDialog.Builder(context)
+//                                            .setTitle("Hint")
+//                                            .setView(textView)
+//                                            .setNeutralButton("Report Exection", new DialogInterface.OnClickListener() {
+//                                                @Override
+//                                                public void onClick(DialogInterface dialog, int which) {
+//                                                    JumpEdit(context);
+//                                                }
+//                                            })
+//                                            .setPositiveButton("Test Next", null)
+//                                            .create();
+//                                    alertDialog.show();
+//                                    //然后把它去掉
+////                                    OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/edge/" + edgeInfo.getId() + "/" + uid,
+////                                            new okhttp3.Callback() {
+////                                                @Override
+////                                                public void onFailure(Call call, IOException e) {
+//////
+////                                                }
+////
+////                                                @Override
+////                                                public void onResponse(Call call, Response response) throws IOException {
+//////
+////                                                }
+////                                            });
+//
+//                                }
+//                                break;
+//                            case MSG_FAIL:
+//                                Toast.makeText(context, "Network Error", Toast.LENGTH_SHORT).show();
+//                                break;
+//                            default:
+//                                break;
+//                        }
+//                    }
+//                };
+//
+//
+//                if(step<nodeWindows.length)
+//                {
+//                     next_window = nodeWindows[step];
+//                    if(next_window.startsWith(" "))
+//                    {
+//                        next_window = next_window.substring(1,next_window.length());
+//                    }
+//                }
+//                OkHttpRequest.sendOkHttpRequest("http://118.178.18.181:58015/path/nextHint/"
+//                                + currentWindow + "/" +next_window+ "/" + new Long(edgeInfo.getId()),
+//                        new Callback() {
+//                            @Override
+//                            public void onFailure(Call call, IOException e) {
+//                                Message message = new Message();
+//                                message.what = MSG_FAIL;
+//                                handler.sendMessage(message);
+//                            }
+//
+//                            public void onResponse(Call call, Response response) throws IOException {
+//                                Message message = new Message();
+//                                message.what = MSG_OK;
+//                                message.obj = response.body().string();
+//                                handler.sendMessage(message);
+//                                System.out.println("拿到数据："+message.obj.toString()+"-----------------------------------------");
+//                            }
+//                        });
+//             }
+//
+//         }
+//
+//    }
+    //这是学姐写的
 //    @SuppressLint("HandlerLeak")
 //    public void Hint(final Activity context) {
 //        String currWindow = getCurrentActivity().getClass().getName();
